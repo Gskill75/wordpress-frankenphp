@@ -22,7 +22,7 @@ RUN install-php-extensions \
 
 RUN \
     TMPDIR=$(mktemp -d) && \
-    wget https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz -O ${TMPDIR}/wordpress.tar.gz && \
+    curl -L -o ${TMPDIR}/wordpress.tar.gz https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz && \
     tar -xzf ${TMPDIR}/wordpress.tar.gz -C ${TMPDIR} && \
     mv ${TMPDIR}/wordpress/* /app/public && \
     rm -rf ${TMPDIR} && \
