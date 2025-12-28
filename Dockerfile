@@ -26,6 +26,7 @@ RUN \
     tar -xzf ${TMPDIR}/wordpress.tar.gz -C ${TMPDIR} && \
     mv ${TMPDIR}/wordpress/* /app/public && \
     rm -rf ${TMPDIR} && \
+    curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x wp-cli.phar && \
     mv wp-cli.phar /usr/local/bin/wp
 
