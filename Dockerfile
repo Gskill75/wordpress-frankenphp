@@ -52,7 +52,7 @@ RUN \
     tar -xzf - -C /app/public --strip-components=1 && \
     rm -rf ${TMPDIR} && \
     curl -L -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
-    chmod 755 wp-cli.phar && \
+    chmod 755 /usr/local/bin/wp && \
     curl -L -o /app/public/wp-config-docker.php https://raw.githubusercontent.com/docker-library/wordpress/master/wp-config-docker.php && \
     chown -R ${USER}:${USER}  /app/public && \
     mkdir -p /app/public/wp-content && \
