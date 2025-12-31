@@ -100,15 +100,14 @@ main() {
     if [ ! -s wp-config.php ] && [ "${#wpEnvs[@]}" -gt 0 ]; then
         echo >&2 "Génération de wp-config.php..."
         
-        awk '
-            /put your unique phrase here/ {
-                cmd = "head -c1m /dev/urandom | sha1sum | cut -d \\047 -f1"
-                cmd | getline str
-                close(cmd)
-                gsub("put your unique phrase here", str)
-            }
-            { print }
-        ' wp-config-docker.php > wp-config.php
+        # Copier le fichier template
+        cp wp-config-docker.php wp-config.php
+        
+        # Remplacer chaque occurrence de "put your unique phrase here" par une clé aléatoire
+        while grep -q "put your unique phrase here" wp-config.php; do
+            RANDOM_KEY=$(head -c 64 /dev/urandom | base64 | tr -d '\n/+=' | head -c 64)
+            sed -i "0,/put your unique phrase here/s/put your unique phrase here/$RANDOM_KEY/" wp-config.php
+        done
         
         chmod 644 wp-config.php
         echo >&2 "✓ wp-config.php créé"
