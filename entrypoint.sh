@@ -102,7 +102,7 @@ main() {
         
         awk '
             /put your unique phrase here/ {
-                cmd = "head -c1m /dev/urandom | sha1sum | cut -d '\'' -f1"
+                cmd = "head -c1m /dev/urandom | sha1sum | cut -d \\047 -f1"
                 cmd | getline str
                 close(cmd)
                 gsub("put your unique phrase here", str)
