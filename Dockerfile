@@ -24,8 +24,7 @@ RUN install-php-extensions \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends default-mysql-client; \
-    rm -rf /var/lib/apt/lists/* && \
-    echo -e '[client]\nskip-ssl = true' > /etc/my.cnf
+    rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
     { \
