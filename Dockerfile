@@ -21,6 +21,11 @@ RUN install-php-extensions \
     # See https://github.com/Imagick/imagick/issues/640#issuecomment-2077206945
     imagick/imagick@master \
     opcache
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends default-mysql-client; \
+    rm -rf /var/lib/apt/lists/* && \
+    echo -e '[client]\nskip-ssl = true' > /etc/my.cnf
 
 RUN set -eux; \
     { \

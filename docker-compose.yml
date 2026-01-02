@@ -1,63 +1,70 @@
-version: '3.8'
-
 services:
+  mariadb:
+    image: docker.io/mariadb:lts-ubi9
+    container_name: wordpress-frankenphp-mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MARIADB_DATABASE: ${WORDPRESS_DB_NAME:-wordpress}
+      MARIADB_USER: ${WORDPRESS_DB_USER:-wordpress}
+      MARIADB_PASSWORD: ${WORDPRESS_DB_PASSWORD:-wordpress}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - wordpress-network
+
   wordpress:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: wordpress-frankenphp
+    depends_on:
+      mariadb:
+        condition: service_healthy
     ports:
-      - "8080:80"
+      - "8080:8080"
     environment:
-      # Configuration de la base de données (requis)
-      WORDPRESS_DB_HOST: mysql:3306
+      # DB
+      WORDPRESS_DB_HOST: mariadb
       WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:-wordpress}
       WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:-wordpress}
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:-wordpress}
-      
-      # Configuration de l'installation automatique
+
+      # Timing DB 
+      WORDPRESS_DB_INITIAL_DELAY: 5
+      WORDPRESS_DB_WAIT_TIMEOUT: 180
+
+      # Caddy Config
+      SERVER_NAME: ${SERVER_NAME:-:8080}
+      CADDY_GLOBAL_OPTIONS: debug
+      SERVER_ROOT: /app/public
+      # Installation WordPress
       WORDPRESS_URL: ${WORDPRESS_URL:-http://localhost:8080}
       WORDPRESS_TITLE: ${WORDPRESS_TITLE:-Mon Site WordPress}
       WORDPRESS_ADMIN_USER: ${WORDPRESS_ADMIN_USER:-admin}
       WORDPRESS_ADMIN_PASSWORD: ${WORDPRESS_ADMIN_PASSWORD:-AdminPassword123!}
       WORDPRESS_ADMIN_EMAIL: ${WORDPRESS_ADMIN_EMAIL:-admin@example.com}
-      WORDPRESS_LOCALE: ${WORDPRESS_LOCALE:-fr_FR}
-      
-      # Configuration optionnelle
-      WORDPRESS_TIMEZONE: ${WORDPRESS_TIMEZONE:-Europe/Paris}
-      WORDPRESS_PERMALINK_STRUCTURE: ${WORDPRESS_PERMALINK_STRUCTURE:-/%postname%/}
-      WORDPRESS_AUTO_UPDATE: ${WORDPRESS_AUTO_UPDATE:-false}
+      WORDPRESS_LOCALE: fr_FR
+
+      # Options
+      WORDPRESS_TIMEZONE: Europe/Paris
+      WORDPRESS_AUTO_UPDATE: "false"
+      WORDPRESS_PERMALINK_STRUCTURE: "/%postname%/"
     volumes:
       - wordpress_data:/app/public/wp-content
-    depends_on:
-      mysql:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - wordpress-network
-
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${WORDPRESS_DB_NAME:-wordpress}
-      MYSQL_USER: ${WORDPRESS_DB_USER:-wordpress}
-      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD:-wordpress}
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$MYSQL_ROOT_PASSWORD"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     restart: unless-stopped
     networks:
       - wordpress-network
 
 volumes:
+  mariadb_data:
   wordpress_data:
-    driver: local
-  mysql_data:
-    driver: local
 
 networks:
   wordpress-network:
