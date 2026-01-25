@@ -1,0 +1,60 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    "docker:enableMajor"
+  ],
+  "labels": ["dependencies"],
+  "schedule": ["before 9am on monday"],
+  "timezone": "Europe/Paris",
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "description": "GitHub Actions - group all updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "additionalLabels": ["github-actions"],
+      "commitMessagePrefix": "ci(deps):"
+    },
+    {
+      "description": "Docker - FrankenPHP base image",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["dunglas/frankenphp"],
+      "additionalLabels": ["docker"],
+      "commitMessagePrefix": "docker(deps):"
+    },
+    {
+      "description": "WordPress - auto-merge patch versions",
+      "matchPackageNames": ["wordpress"],
+      "additionalLabels": ["wordpress"],
+      "commitMessagePrefix": "chore(wordpress):",
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": ["patch"]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "WordPress version in Dockerfile ARG",
+      "fileMatch": ["^Dockerfile$"],
+      "matchStrings": [
+        "ARG WORDPRESS_VERSION=(?<currentValue>\\d+\\.\\d+\\.?\\d*)"
+      ],
+      "depNameTemplate": "wordpress",
+      "datasourceTemplate": "custom.wordpress",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "customDatasources": {
+    "wordpress": {
+      "defaultRegistryUrlTemplate": "https://api.wordpress.org/core/version-check/1.7/",
+      "transformTemplates": [
+        "{\"releases\": $map(offers, function($v) { {\"version\": $v.version} })}"
+      ]
+    }
+  }
+}
