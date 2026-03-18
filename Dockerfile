@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:1.11-php8.4
+FROM dunglas/frankenphp:1.12-php8.4
 
 ARG USER=appuser
 ARG WORDPRESS_VERSION=6.9
