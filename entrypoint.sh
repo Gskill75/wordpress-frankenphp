@@ -5,7 +5,7 @@ WORDPRESS_DIR="/app/public"
 WP_CLI="/usr/local/bin/wp"
 
 wp() {
-  "$WP_CLI" --path="$WORDPRESS_DIR" --allow-root "$@"
+  "$WP_CLI" --path="$WORDPRESS_DIR" "$@"
 }
 
 check_wordpress_installation() {
@@ -67,7 +67,9 @@ install_wordpress() {
     echo >&2 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo >&2 "URL: $WP_URL"
     echo >&2 "Admin: $WP_ADMIN_USER"
-    echo >&2 "Password: $WP_ADMIN_PASSWORD"
+    if [ -z "${WORDPRESS_ADMIN_PASSWORD:-}" ]; then
+      echo >&2 "Password: $WP_ADMIN_PASSWORD"
+    fi
     echo >&2 "Email: $WP_ADMIN_EMAIL"
     echo >&2 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -93,13 +95,9 @@ generate_wp_config_if_needed() {
 
     cp "$WORDPRESS_DIR/wp-config-docker.php" "$WORDPRESS_DIR/wp-config.php"
 
-    # Remplacer chaque occurrence de "put your unique phrase here" par une clé aléatoire (alphanum uniquement)
-    while grep -q "put your unique phrase here" "$WORDPRESS_DIR/wp-config.php"; do
-      RANDOM_KEY="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 64)"
-      sed -i "0,/put your unique phrase here/s/put your unique phrase here/$RANDOM_KEY/" "$WORDPRESS_DIR/wp-config.php"
-    done
+    wp config shuffle-salts >/dev/null 2>&1 || true
 
-    chmod 0644 "$WORDPRESS_DIR/wp-config.php"
+    chmod 0600 "$WORDPRESS_DIR/wp-config.php"
     echo >&2 "✓ wp-config.php créé"
   fi
 
@@ -141,7 +139,7 @@ wait_for_db_wpcli() {
 
     # On capture l’erreur WP-CLI pour la loguer
     local out
-    if out="$(wp db check 2>&1)"; then
+    if out="$(wp db query "SELECT 1" 2>&1)"; then
       echo >&2 "✓ Base de données accessible (WP-CLI) après ${elapsed}s (tentatives: ${attempt})"
       return 0
     fi
@@ -167,6 +165,12 @@ wait_for_db_wpcli() {
 }
 
 main() {
+  # OpenShift assigns an arbitrary UID at runtime; register it in /etc/passwd so
+  # tools that call getpwuid() (WP-CLI, PHP, openssl) can resolve the username.
+  if ! whoami &>/dev/null && [ -w /etc/passwd ]; then
+    echo "appuser:x:$(id -u):0:appuser:/app:/sbin/nologin" >> /etc/passwd
+  fi
+
   cd "$WORDPRESS_DIR"
 
   # Génération du wp-config.php (si nécessaire)
@@ -193,6 +197,8 @@ main() {
       echo >&2 "✗ Installation WordPress échouée → arrêt du conteneur (exit 2)"
       exit 2
     fi
+  else
+    configure_wordpress
   fi
 
   # Lancement du process principal (FrankenPHP)

@@ -1,15 +1,14 @@
 FROM dunglas/frankenphp:1.11-php8.4
 
-ARG USER=appuser
 ARG WORDPRESS_VERSION=6.9
 COPY entrypoint.sh /docker-entrypoint.sh
 RUN \
-	useradd ${USER}; \
-	setcap -r /usr/local/bin/frankenphp; \
-	# Give write access to /config/caddy and /data/caddy
-	chown -R ${USER}:${USER} /config/caddy /data/caddy /app && \
+    setcap -r /usr/local/bin/frankenphp; \
+    chown -R 1000:0 /config/caddy /data/caddy /app && \
+    chmod -R g+rwX /config/caddy /data/caddy /app && \
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
-    chmod 755 /docker-entrypoint.sh 
+    chmod g=u /etc/passwd && \
+    chmod 755 /docker-entrypoint.sh
 
 RUN install-php-extensions \
     bcmath \
@@ -19,7 +18,7 @@ RUN install-php-extensions \
     mysqli \
     zip \
     # See https://github.com/Imagick/imagick/issues/640#issuecomment-2077206945
-    imagick/imagick@master \
+    imagick/imagick@3.7.0 \
     opcache
 RUN set -eux; \
     apt-get update; \
@@ -33,8 +32,8 @@ RUN set -eux; \
         echo 'opcache.memory_consumption=128'; \
         echo 'opcache.interned_strings_buffer=8'; \
         echo 'opcache.max_accelerated_files=4000'; \
-        echo 'opcache.revalidate_freq=2'; \
-        echo 'opcache.validate_timestamps=1'; \
+        echo 'opcache.revalidate_freq=0'; \
+        echo 'opcache.validate_timestamps=0'; \
         echo 'opcache.save_comments=1'; \
         echo 'opcache.fast_shutdown=1'; \
     } > "$PHP_INI_DIR/conf.d/opcache-recommended.ini" && \
@@ -51,17 +50,15 @@ RUN set -eux; \
     } > "$PHP_INI_DIR/conf.d/error-logging.ini"
 
 RUN \
-    TMPDIR=$(mktemp -d) && \
     curl -L https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz | \
     tar -xzf - -C /app/public --strip-components=1 && \
-    rm -rf ${TMPDIR} && \
     curl -L -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod 755 /usr/local/bin/wp && \
     curl -L -o /app/public/wp-config-docker.php https://raw.githubusercontent.com/docker-library/wordpress/master/wp-config-docker.php && \
-    chown -R ${USER}:${USER}  /app/public && \
-    mkdir -p /app/public/wp-content && \
-    chown -R ${USER}:${USER}  /app/public/wp-content
+    chown -R 1000:0 /app/public && \
+    chmod -R g+rwX /app/public
 
-USER ${USER}
+ENV HOME=/app
+USER 1000
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
