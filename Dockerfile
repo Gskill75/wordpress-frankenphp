@@ -18,7 +18,7 @@ RUN install-php-extensions \
     mysqli \
     zip \
     # See https://github.com/Imagick/imagick/issues/640#issuecomment-2077206945
-    imagick/imagick@3.7.0 \
+    imagick/imagick@master \
     opcache
 RUN set -eux; \
     apt-get update; \
